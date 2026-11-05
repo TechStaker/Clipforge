@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 title ClipForge - Auto Git Sync Watcher
 echo ====================================================
 echo   ClipForge Auto-Git-Push Active
