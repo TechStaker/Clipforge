@@ -26,7 +26,8 @@ function shouldIgnore(filename) {
   return (
     IGNORED_PATHS.some((p) => normalized.startsWith(p) || normalized.includes(`/${p}/`)) ||
     normalized.endsWith('.log') ||
-    normalized.endsWith('.tmp')
+    normalized.endsWith('.tmp') ||
+    normalized.endsWith('.bat')
   );
 }
 
