@@ -223,7 +223,13 @@ async function processYouTubeUrl(req, res) {
     let metaInfo = null;
     try {
       metaInfo = await youtubeService.getYouTubeMetadata(url);
-    } catch {
+    } catch (err) {
+      if (err.message && (err.message.includes('unavailable') || err.message.includes('private') || err.message.includes('removed'))) {
+        return res.status(400).json({
+          success: false,
+          error: err.message
+        });
+      }
       metaInfo = {
         title: `YouTube Video (${videoId})`,
         thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`

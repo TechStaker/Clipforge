@@ -1874,6 +1874,10 @@ body {
 }
 
 @media (max-width: 640px) {
+  #openCloudSettingsBtn {
+    display: none;
+  }
+
   .clips-grid {
     grid-template-columns: 1fr;
   }

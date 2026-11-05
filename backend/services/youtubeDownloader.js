@@ -260,14 +260,18 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
       const fullLog = err2.fullLog || err1.fullLog || err2.message || '';
 
       // User-friendly error messages for common YouTube restriction scenarios
-      if (fullLog.includes('This video is unavailable')) {
-        throw new Error('This YouTube video is unavailable or has been removed on YouTube. Please check the link or choose another video.');
+      if (
+        fullLog.includes('This video is unavailable') ||
+        fullLog.includes('Video unavailable') ||
+        fullLog.includes('The page needs to be reloaded')
+      ) {
+        throw new Error('This YouTube video is unavailable, deleted, or region-restricted on YouTube. Please check the link or try another active YouTube video.');
       }
       if (fullLog.includes('Private video')) {
         throw new Error('This YouTube video is set to Private. Please use a public YouTube video link or upload the video file directly.');
       }
       if (fullLog.includes('Sign in to confirm you') || fullLog.includes('HTTP Error 429')) {
-        throw new Error('YouTube is blocking automated cloud server requests for this specific video. You can still clip this video seamlessly by uploading it directly using the "Upload Local Video File" box!');
+        throw new Error('YouTube is blocking cloud server requests for this video. Use the "Upload Local Video File" box or click "Cloud Setup" to authenticate with cookies.');
       }
 
       const errorLines = fullLog

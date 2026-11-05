@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cloud YouTube Authentication & Setup Modal
   // -------------------------------------------------------------
   const openCloudSettingsBtn = document.getElementById('openCloudSettingsBtn');
+  const drawerCloudSetupBtn = document.getElementById('drawerCloudSetupBtn');
   const triggerCloudSetupLink = document.getElementById('triggerCloudSetupLink');
   const cloudSetupModal = document.getElementById('cloudSetupModal');
   const closeCloudSetupBtn = document.getElementById('closeCloudSetupBtn');
@@ -170,6 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (openCloudSettingsBtn) openCloudSettingsBtn.addEventListener('click', openCloudModal);
+  if (drawerCloudSetupBtn) {
+    drawerCloudSetupBtn.addEventListener('click', () => {
+      if (mobileDrawer) mobileDrawer.classList.remove('open');
+      openCloudModal();
+    });
+  }
   if (triggerCloudSetupLink) triggerCloudSetupLink.addEventListener('click', openCloudModal);
   if (closeCloudSetupBtn) closeCloudSetupBtn.addEventListener('click', closeCloudModal);
   if (cloudSetupModal) {
