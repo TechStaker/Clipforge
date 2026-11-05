@@ -93,17 +93,22 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedDuration = 30; // default 30 seconds
   let isJobPaused = false;
 
-  // Configurable API base URL (empty string for same-origin, or custom backend URL when hosted on Vercel/Render)
-  const API_BASE = (window.CLIPFORGE_API_URL || localStorage.getItem('CLIPFORGE_API_URL') || '').replace(/\/$/, '');
+  // Universal default backend: automatically connects on all devices without requiring manual setup
+  const DEFAULT_BACKEND = 'https://clipforge-backend-35fv.onrender.com';
+  const isVercel = window.location.hostname.includes('vercel.app');
+  const API_BASE = (
+    localStorage.getItem('CLIPFORGE_API_URL') ||
+    window.CLIPFORGE_API_URL ||
+    (isVercel ? DEFAULT_BACKEND : '')
+  ).replace(/\/$/, '');
 
-  // Show backend connection banner only if deployed on Vercel without configured backend
+  // Hide banner automatically since backend is permanently connected
   const backendConfigBanner = document.getElementById('backendConfigBanner');
   const backendUrlInput = document.getElementById('backendUrlInput');
   const saveBackendUrlBtn = document.getElementById('saveBackendUrlBtn');
 
-  const isVercel = window.location.hostname.includes('vercel.app');
-  if (isVercel && !API_BASE && backendConfigBanner) {
-    backendConfigBanner.classList.remove('hidden');
+  if (backendConfigBanner) {
+    backendConfigBanner.classList.add('hidden');
   }
 
   if (saveBackendUrlBtn && backendUrlInput) {
