@@ -7,3 +7,4 @@ echo   Any time you save a file, it will auto-push to GitHub!
 echo ====================================================
 node scripts/auto_git_sync.js
 pause
+

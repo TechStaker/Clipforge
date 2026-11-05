@@ -36,80 +36,49 @@ try {
 // Active download child processes map for pause / cancel
 const activeDownloads = new Map();
 
+const PRIMARY_EXTRACTOR_ARGS = 'youtube:player_client=android_vr,tv_downgraded,tv,android,web_embedded;player_skip=webpage';
+const FALLBACK_EXTRACTOR_ARGS = 'youtube:player_client=tv,android;player_skip=webpage';
+
 /**
- * Cancels or terminates an active download
- * @param {string} jobId
+ * Builds resilient yt-dlp arguments tailored for cloud servers & datacenter IPs
  */
-function cancelDownload(jobId) {
-  const child = activeDownloads.get(jobId);
-  if (child) {
-    try {
-      child.kill('SIGTERM');
-    } catch {}
-    activeDownloads.delete(jobId);
-    return true;
+function buildYtDlpArgs(outputTemplate, extractorArgs, formatString, url) {
+  const args = [
+    '--no-playlist',
+    '--js-runtimes', 'node',
+    '--extractor-args', extractorArgs,
+    '--force-ipv4',
+    '--geo-bypass',
+    '-N', '8', // 8 concurrent multi-connection threads for ultra-fast download
+    '--max-filesize', '1024M',
+    '-f', formatString,
+    '--merge-output-format', 'mp4',
+    '--newline'
+  ];
+
+  // Optional cookies support for authenticated extraction
+  const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
+  if (process.env.YOUTUBE_COOKIES_PATH && fs.existsSync(process.env.YOUTUBE_COOKIES_PATH)) {
+    args.push('--cookies', process.env.YOUTUBE_COOKIES_PATH);
+  } else if (fs.existsSync(rootCookies)) {
+    args.push('--cookies', rootCookies);
   }
-  return false;
+
+  if (ffmpegBinaryPath && fs.existsSync(ffmpegBinaryPath)) {
+    args.push('--ffmpeg-location', path.dirname(ffmpegBinaryPath));
+  }
+
+  args.push('-o', outputTemplate);
+  args.push(url);
+
+  return args;
 }
 
 /**
- * Fast YouTube Video Downloader
- * - Uses --js-runtimes node to bypass YouTube bot challenge throttling
- * - Uses -N 8 (multi-connection concurrent streams)
- * - Directly downloads 1080p stream
- * 
- * @param {Object} options
- * @param {string} options.url - YouTube video URL
- * @param {string} options.outputDir - Output directory
- * @param {string} options.jobId - Unique Job ID
- * @param {Function} [options.onProgress] - Callback for download progress
- * @returns {Promise<{ filePath: string, fileName: string }>}
+ * Low-level child process executor for yt-dlp
  */
-function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
+function executeDownload(args, jobId, outputDir, onProgress) {
   return new Promise((resolve, reject) => {
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    const outputTemplate = path.join(outputDir, `yt_source_${jobId}.%(ext)s`);
-
-    const nodeExecutable = process.execPath;
-    const args = [
-      '--no-playlist',
-      '--js-runtimes', `node:${nodeExecutable}`,
-      '--extractor-args', 'youtube:player_client=android,ios,web',
-      '--geo-bypass',
-      '-N', '8', // 8 concurrent multi-connection threads for ultra-fast download
-      '--max-filesize', '1024M',
-      // Prioritize 1080p Full HD video stream
-      '-f', 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
-      '--merge-output-format', 'mp4',
-      '--newline',
-      '-o', outputTemplate
-    ];
-
-    // Optional cookies support for authenticated extraction
-    const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
-    if (process.env.YOUTUBE_COOKIES_PATH && fs.existsSync(process.env.YOUTUBE_COOKIES_PATH)) {
-      args.push('--cookies', process.env.YOUTUBE_COOKIES_PATH);
-    } else if (fs.existsSync(rootCookies)) {
-      args.push('--cookies', rootCookies);
-    }
-
-    if (ffmpegBinaryPath && fs.existsSync(ffmpegBinaryPath)) {
-      args.push('--ffmpeg-location', path.dirname(ffmpegBinaryPath));
-    }
-
-    args.push(url);
-
-    if (onProgress) {
-      onProgress({
-        status: 'downloading',
-        message: 'Fast multi-threaded 1080p connection to YouTube...',
-        percent: 5
-      });
-    }
-
     const ytProcess = spawn(YT_DLP_PATH, args);
     activeDownloads.set(jobId, ytProcess);
 
@@ -140,35 +109,26 @@ function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
       stderrData += data.toString();
     });
 
+    ytProcess.on('error', (err) => {
+      activeDownloads.delete(jobId);
+      reject(new Error(`Failed to execute yt-dlp: ${err.message}`));
+    });
+
     ytProcess.on('close', (code) => {
       activeDownloads.delete(jobId);
 
       if (code !== 0) {
         // If it was cancelled by user
         if (stdoutData.includes('SIGTERM') || stderrData.includes('SIGTERM')) {
-          return reject(new Error('Download cancelled by user.'));
+          const cancelErr = new Error('Download cancelled by user.');
+          cancelErr.isCancelled = true;
+          return reject(cancelErr);
         }
 
         const fullLog = (stderrData + '\n' + stdoutData);
-
-        // User-friendly error messages for common YouTube restriction scenarios:
-        if (fullLog.includes('This video is unavailable')) {
-          return reject(new Error('This YouTube video is unavailable or has been removed on YouTube. Please check the link or choose another video.'));
-        }
-        if (fullLog.includes('Private video')) {
-          return reject(new Error('This YouTube video is set to Private. Please use a public YouTube video link or upload the video file directly.'));
-        }
-        if (fullLog.includes('Sign in to confirm you') || fullLog.includes('HTTP Error 429')) {
-          return reject(new Error('YouTube is blocking automated cloud server requests for this specific video. You can still clip this video seamlessly by uploading it directly using the "Upload Local Video File" box!'));
-        }
-
-        const errorLines = fullLog
-          .split('\n')
-          .filter(l => l.includes('ERROR:'))
-          .map(l => l.replace(/ERROR:\s*(\[[^\]]+\])?\s*/i, '').trim());
-
-        const primaryError = errorLines[0] || fullLog.replace(/WARNING:[^\n]*\n?/g, '').trim().slice(0, 300);
-        return reject(new Error(`Failed to download YouTube video: ${primaryError}`));
+        const failErr = new Error(fullLog);
+        failErr.fullLog = fullLog;
+        return reject(failErr);
       }
 
       try {
@@ -176,7 +136,7 @@ function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
         const downloadedFile = files.find((f) => f.startsWith(`yt_source_${jobId}`));
 
         if (!downloadedFile) {
-          return reject(new Error('Downloaded 1080p video file could not be located in output directory.'));
+          return reject(new Error('Downloaded video file could not be located in output directory.'));
         }
 
         const fullPath = path.join(outputDir, downloadedFile);
@@ -188,12 +148,116 @@ function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
         reject(err);
       }
     });
-
-    ytProcess.on('error', (err) => {
-      activeDownloads.delete(jobId);
-      reject(new Error(`Failed to execute yt-dlp: ${err.message}`));
-    });
   });
+}
+
+/**
+ * Cancels or terminates an active download
+ * @param {string} jobId
+ */
+function cancelDownload(jobId) {
+  const child = activeDownloads.get(jobId);
+  if (child) {
+    try {
+      child.kill('SIGTERM');
+    } catch {}
+    activeDownloads.delete(jobId);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Fast YouTube Video Downloader
+ * - Uses --js-runtimes node to solve challenges dynamically
+ * - Bypasses bot detection & 429 datacenter blocks by querying Android VR, TV, Web-Embedded APIs and skipping the webpage
+ * - Employs automatic TV/Android client fallback if primary multi-client stream fails
+ * - Multi-threaded 1080p stream capture with -N 8
+ * 
+ * @param {Object} options
+ * @param {string} options.url - YouTube video URL
+ * @param {string} options.outputDir - Output directory
+ * @param {string} options.jobId - Unique Job ID
+ * @param {Function} [options.onProgress] - Callback for download progress
+ * @returns {Promise<{ filePath: string, fileName: string }>}
+ */
+async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const outputTemplate = path.join(outputDir, `yt_source_${jobId}.%(ext)s`);
+
+  if (onProgress) {
+    onProgress({
+      status: 'downloading',
+      message: 'Fast multi-threaded 1080p connection to YouTube...',
+      percent: 5
+    });
+  }
+
+  // Attempt 1: Multi-client rotation with player_skip=webpage
+  const primaryArgs = buildYtDlpArgs(
+    outputTemplate,
+    PRIMARY_EXTRACTOR_ARGS,
+    'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+    url
+  );
+
+  try {
+    return await executeDownload(primaryArgs, jobId, outputDir, onProgress);
+  } catch (err1) {
+    if (err1.isCancelled) {
+      throw err1;
+    }
+
+    console.warn(`[YouTube Downloader] Primary client rotation encountered an issue: ${err1.message.slice(0, 150)}. Retrying with TV/Android client fallback...`);
+
+    // Clean up partial files from attempt 1 if any
+    try {
+      const existing = fs.readdirSync(outputDir).filter(f => f.startsWith(`yt_source_${jobId}`));
+      existing.forEach(f => {
+        try { fs.unlinkSync(path.join(outputDir, f)); } catch {}
+      });
+    } catch {}
+
+    // Attempt 2: Fallback TV & Android smart clients
+    const fallbackArgs = buildYtDlpArgs(
+      outputTemplate,
+      FALLBACK_EXTRACTOR_ARGS,
+      'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best/18',
+      url
+    );
+
+    try {
+      return await executeDownload(fallbackArgs, jobId, outputDir, onProgress);
+    } catch (err2) {
+      if (err2.isCancelled) {
+        throw err2;
+      }
+
+      const fullLog = err2.fullLog || err1.fullLog || err2.message || '';
+
+      // User-friendly error messages for common YouTube restriction scenarios
+      if (fullLog.includes('This video is unavailable')) {
+        throw new Error('This YouTube video is unavailable or has been removed on YouTube. Please check the link or choose another video.');
+      }
+      if (fullLog.includes('Private video')) {
+        throw new Error('This YouTube video is set to Private. Please use a public YouTube video link or upload the video file directly.');
+      }
+      if (fullLog.includes('Sign in to confirm you') || fullLog.includes('HTTP Error 429')) {
+        throw new Error('YouTube is blocking automated cloud server requests for this specific video. You can still clip this video seamlessly by uploading it directly using the "Upload Local Video File" box!');
+      }
+
+      const errorLines = fullLog
+        .split('\n')
+        .filter(l => l.includes('ERROR:'))
+        .map(l => l.replace(/ERROR:\s*(\[[^\]]+\])?\s*/i, '').trim());
+
+      const primaryError = errorLines[0] || fullLog.replace(/WARNING:[^\n]*\n?/g, '').trim().slice(0, 300);
+      throw new Error(`Failed to download YouTube video: ${primaryError}`);
+    }
+  }
 }
 
 module.exports = {
