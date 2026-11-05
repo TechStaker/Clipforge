@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClipForge | Turn Long Videos Into Ready-to-Share Clips</title>
+  <meta name="description" content="Professional video clipping platform. Split your long videos into perfectly organized 30-second clips using high-performance FFmpeg processing. Preview, download individually or export all as ZIP.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+  <!-- Ambient Background Glow Gradients -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <!-- Backend Connection Banner (Only shown if deployed on Vercel without backend configured) -->
+  <div id="backendConfigBanner" class="backend-config-banner hidden">
+    <div class="config-banner-content">
+      <div class="config-banner-text">
+        <span>🔗 <strong>Connect Free Backend:</strong> Paste your Render/Railway backend URL to enable video processing:</span>
+      </div>
+      <div class="config-banner-actions">
+        <input type="url" id="backendUrlInput" placeholder="https://your-backend.onrender.com" class="config-input">
+        <button type="button" id="saveBackendUrlBtn" class="btn btn-primary btn-sm">Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="site-header">
+    <div class="container header-container">
+      <a href="#" class="brand-logo">
+        <div class="logo-icon-box">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19" stroke-linecap="round"></line>
+          </svg>
+        </div>
+        <span class="brand-name">Clip<span class="text-gradient">Forge</span></span>
+      </a>
+
+      <nav class="desktop-nav">
+        <a href="#home" class="nav-link active">Home</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#faq" class="nav-link">FAQ</a>
+      </nav>
+
+      <div class="header-actions">
+        <a href="#workspace" class="btn btn-primary btn-sm">
+          <span>Get Started</span>
+          <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </a>
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Nav Drawer -->
+    <div class="mobile-drawer" id="mobileDrawer">
+      <a href="#home" class="mobile-nav-link">Home</a>
+      <a href="#how-it-works" class="mobile-nav-link">How It Works</a>
+      <a href="#features" class="mobile-nav-link">Features</a>
+      <a href="#faq" class="mobile-nav-link">FAQ</a>
+      <a href="#workspace" class="btn btn-primary w-full mt-4">Get Started</a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section id="home" class="hero-section">
+      <div class="container hero-container">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          <span class="badge-text">Professional 30-Second Video Splitting Engine</span>
+        </div>
+
+        <h1 class="hero-title">
+          Turn Long Videos Into <br class="hidden-mobile">
+          <span class="text-gradient">Short Clips in Seconds.</span>
+        </h1>
+
+        <p class="hero-subtitle">
+          Split your long videos into perfectly organized 30-second clips.
+          Preview, download individually, or export all together with zero quality loss.
+        </p>
+
+        <!-- Main Workspace Interface -->
+        <section id="workspace" class="workspace-card glass-panel">
+          <div class="workspace-header">
+            <div class="step-indicator">
+              <span class="step-badge active" id="step1Indicator">1. Input Details</span>
+              <span class="step-separator">→</span>
+              <span class="step-badge" id="step2Indicator">2. Process & Cut</span>
+              <span class="step-separator">→</span>
+              <span class="step-badge" id="step3Indicator">3. Preview & Download</span>
+            </div>
+          </div>
+
+          <!-- Input Setup Form -->
+          <form id="clipForm" class="workspace-body" onsubmit="return false;">
+            <div class="form-grid">
+
+              <!-- Left Column: YouTube Video URL Validation -->
+              <div class="input-block">
+                <div class="block-header">
+                  <div class="icon-label">
+                    <span class="block-num">A</span>
+                    <h3>YouTube Video URL</h3>
+                  </div>
+                  <span class="status-chip chip-success">Direct URL Clipping Ready</span>
+                </div>
+                <p class="block-desc">Paste any YouTube or Shorts URL to automatically download, split, and generate downloadable 30-40 second clips.</p>
+
+                <div class="input-action-group">
+                  <div class="input-icon-wrapper">
+                    <svg class="input-icon yt-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                    </svg>
+                    <input
+                      type="url"
+                      id="youtubeUrlInput"
+                      class="text-input"
+                      placeholder="https://www.youtube.com/watch?v=... or youtu.be/..."
+                      autocomplete="off"
+                    >
+                  </div>
+                  <button type="button" id="fetchYtBtn" class="btn btn-secondary">
+                    <span id="fetchBtnText">Fetch Info</span>
+                    <span id="fetchBtnSpinner" class="spinner-sm hidden"></span>
+                  </button>
+                </div>
+
+                <!-- YouTube Info Card (Hidden by default, shown upon metadata fetch) -->
+                <div id="ytInfoCard" class="yt-preview-card hidden">
+                  <div class="yt-thumb-container">
+                    <img id="ytThumbImg" src="" alt="YouTube Video Thumbnail" class="yt-thumb-img">
+                    <span id="ytDurationBadge" class="yt-duration-badge">--:--</span>
+                  </div>
+                  <div class="yt-details">
+                    <div class="yt-badge-row">
+                      <span class="verified-tag">
+                        <svg viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5 inline mr-1">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        Video Detected
+                      </span>
+                      <span id="ytChannel" class="yt-channel-text">Channel</span>
+                    </div>
+                    <h4 id="ytTitle" class="yt-title-text">Video Title</h4>
+                    <p id="ytSourceNote" class="yt-source-text">Ready to be divided into 30-40s clips</p>
+                    <div class="yt-actions-row mt-2">
+                      <button type="button" id="removeYtBtn" class="btn btn-outline-danger btn-sm" title="Remove this video">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        <span>Remove Video</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- URL Error Message -->
+                <div id="ytErrorMsg" class="alert-box alert-error hidden">
+                  <svg viewBox="0 0 20 20" fill="currentColor" class="alert-icon">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                  </svg>
+                  <span id="ytErrorText">Invalid YouTube URL.</span>
+                </div>
+              </div>
+
+              <!-- Right Column: Original Video File Upload -->
+              <div class="input-block">
+                <div class="block-header">
+                  <div class="icon-label">
+                    <span class="block-num">B</span>
+                    <h3>Upload Local Video File</h3>
+                  </div>
+                  <span class="status-chip chip-optional">Optional Alternative</span>
+                </div>
+                <p class="block-desc">Already have the high-resolution source file? Drag & drop it here to split it directly on your machine.</p>
+
+                <!-- Drag & Drop Zone -->
+                <div id="dropZone" class="upload-dropzone">
+                  <input
+                    type="file"
+                    id="videoFileInput"
+                    class="file-hidden-input"
+                    accept=".mp4,.mov,.mkv,.webm,video/mp4,video/quicktime,video/x-matroska,video/webm"
+                  >
+                  <div class="dropzone-content" id="dropzoneEmpty">
+                    <div class="upload-icon-circle">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                    </div>
+                    <h4 class="dropzone-title">Drag & drop your video here</h4>
+                    <p class="dropzone-subtitle">or <span class="highlight-link">browse files</span> from your computer</p>
+                    <div class="format-badges">
+                      <span class="format-pill">MP4</span>
+                      <span class="format-pill">MOV</span>
+                      <span class="format-pill">MKV</span>
+                      <span class="format-pill">WebM</span>
+                      <span class="format-limit">Up to 1 GB</span>
+                    </div>
+                  </div>
+
+                  <!-- Selected File State -->
+                  <div class="dropzone-selected hidden" id="dropzoneSelected">
+                    <div class="file-icon-box">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-7 h-7">
+                        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                        <line x1="7" y1="2" x2="7" y2="22"></line>
+                        <line x1="17" y1="2" x2="17" y2="22"></line>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <line x1="2" y1="7" x2="7" y2="7"></line>
+                        <line x1="2" y1="17" x2="7" y2="17"></line>
+                        <line x1="17" y1="17" x2="22" y2="17"></line>
+                        <line x1="17" y1="7" x2="22" y2="7"></line>
+                      </svg>
+                    </div>
+                    <div class="file-meta">
+                      <span class="file-name" id="selectedFileName">filename.mp4</span>
+                      <div class="file-details">
+                        <span class="file-size" id="selectedFileSize">0 MB</span>
+                        <span class="file-format-badge" id="selectedFileExt">MP4</span>
+                      </div>
+                    </div>
+                    <button type="button" id="removeFileBtn" class="btn btn-outline-danger btn-sm" title="Remove uploaded video">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                      <span>Remove Video</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Ownership Acknowledgment Checkbox -->
+                <div class="legal-acknowledgment">
+                  <label class="custom-checkbox-label">
+                    <input type="checkbox" id="ownershipCheckbox" class="custom-checkbox" checked>
+                    <span class="checkbox-box"></span>
+                    <span class="checkbox-text">
+                      I confirm that I own or have permission/authorization to process and clip this video content.
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Clip Duration Selector (30-40 seconds) -->
+            <div class="duration-control-section">
+              <div class="duration-header">
+                <div class="duration-title-group">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 text-indigo">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <h4>Clip Duration Setting:</h4>
+                  <span class="duration-sub">Divide video into consecutive:</span>
+                </div>
+                <span class="duration-hint">Ideal for Shorts, TikTok & Reels (30–40 sec)</span>
+              </div>
+
+              <div class="duration-presets">
+                <button type="button" class="duration-btn active" data-duration="30">
+                  <span class="dur-val">30s</span>
+                  <span class="dur-label">Standard</span>
+                </button>
+                <button type="button" class="duration-btn" data-duration="35">
+                  <span class="dur-val">35s</span>
+                  <span class="dur-label">Medium</span>
+                </button>
+                <button type="button" class="duration-btn" data-duration="40">
+                  <span class="dur-val">40s</span>
+                  <span class="dur-label">Extended</span>
+                </button>
+                <div class="custom-duration-input-box">
+                  <input type="number" id="customDurationInput" min="15" max="180" placeholder="Custom" class="custom-dur-input">
+                  <span class="sec-unit">sec</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main CTA Action Footer -->
+            <div class="workspace-footer">
+              <div class="security-note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-emerald">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>Hardware-accelerated FFmpeg. Instant downloadable MP4 clips & ZIP archive.</span>
+              </div>
+
+              <button type="button" id="generateClipsBtn" class="btn btn-primary btn-lg">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span id="generateBtnText">Generate 30-40s Clips</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Processing Progress Overlay (Hidden until user clicks generate) -->
+          <div id="processingSection" class="processing-overlay hidden">
+            <div class="processing-card">
+              <div class="processing-header">
+                <div class="processing-spinner-box">
+                  <div class="pulse-ring"></div>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8 spin-slow">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                </div>
+                <h3 class="processing-title" id="processingTitle">Processing Video</h3>
+                <p class="processing-status-msg" id="processingMsg">Uploading your video to the processing engine...</p>
+              </div>
+
+              <!-- Main Progress Bar -->
+              <div class="progress-bar-container">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" id="progressBarFill" style="width: 5%;"></div>
+                </div>
+                <div class="progress-meta">
+                  <span id="progressStepText">Phase 1/3: Uploading</span>
+                  <span id="progressPercentText" class="progress-percent">5%</span>
+                </div>
+              </div>
+
+              <!-- Processing Steps Breakdown -->
+              <div class="processing-steps">
+                <div class="step-item active" id="stepUpload">
+                  <span class="step-dot"></span>
+                  <div class="step-info">
+                    <span class="step-name" id="step1TitleText">1. Source Stream</span>
+                    <span class="step-detail" id="uploadDetail">Preparing video stream...</span>
+                  </div>
+                </div>
+                <div class="step-item" id="stepAnalyze">
+                  <span class="step-dot"></span>
+                  <div class="step-info">
+                    <span class="step-name">2. Analyze Stream</span>
+                    <span class="step-detail" id="analyzeDetail">FFprobe stream inspection</span>
+                  </div>
+                </div>
+                <div class="step-item" id="stepSlice">
+                  <span class="step-dot"></span>
+                  <div class="step-info">
+                    <span class="step-name" id="step3TitleText">3. Slice 1080p Clips</span>
+                    <span class="step-detail" id="sliceDetail">Max 10 clips per video</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pause & Stop Controls -->
+              <div class="processing-controls-row">
+                <button type="button" id="pauseResumeBtn" class="btn btn-secondary btn-sm">
+                  <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                    <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                    <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                  </svg>
+                  <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 hidden">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                  <span id="pauseBtnText">Pause Processing</span>
+                </button>
+
+                <button type="button" id="stopFinishBtn" class="btn btn-outline-warning btn-sm">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                    <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                  </svg>
+                  <span>Stop & View Clips</span>
+                </button>
+
+                <button type="button" id="cancelRemoveBtn" class="btn btn-outline-danger btn-sm" title="Cancel and remove uploaded video">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Cancel & Remove</span>
+                </button>
+              </div>
+
+              <!-- Processing Error View (if failure occurs) -->
+              <div id="processingErrorBox" class="alert-box alert-error hidden mt-4">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="alert-icon">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <div class="error-content">
+                  <span id="processingErrorMsg" class="font-semibold">Processing failed.</span>
+                  <button type="button" id="retryBtn" class="btn btn-secondary btn-sm mt-2">Try Again</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Results Dashboard (Hidden until processing is 100% complete) -->
+          <div id="resultsDashboard" class="results-dashboard hidden">
+            <!-- Dashboard Top Banner -->
+            <div class="results-header-banner">
+              <div class="results-meta-left">
+                <div class="source-thumb-mini">
+                  <img id="resultThumbImg" src="" alt="Video thumbnail" class="result-thumb-img">
+                </div>
+                <div class="source-meta-text">
+                  <div class="result-badge-row">
+                    <span class="status-chip chip-success">Completed</span>
+                    <span id="resultClipsCountBadge" class="status-chip chip-count">0 Clips (Max 10)</span>
+                    <span class="badge-1080p">1080p Full HD</span>
+                  </div>
+                  <h3 id="resultVideoTitle" class="result-video-title">Generated Clips</h3>
+                  <div class="result-details-row">
+                    <span>Total Duration: <strong id="resultTotalDuration">00:00</strong></span>
+                    <span class="dot-separator">•</span>
+                    <span>Segment Size: <strong id="resultSegmentSize">30s</strong></span>
+                    <span class="dot-separator">•</span>
+                    <span>Quality: <strong>1080p Full HD</strong></span>
+                    <span class="dot-separator">•</span>
+                    <span>Format: <strong>MP4</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top Action Buttons -->
+              <div class="results-actions">
+                <button type="button" id="downloadAllZipBtn" class="btn btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span id="downloadAllBtnText">Download All Clips (.ZIP)</span>
+                  <span id="zipLoadingSpinner" class="spinner-sm hidden"></span>
+                </button>
+                <button type="button" id="processAnotherBtn" class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                  <span>Process Another</span>
+                </button>
+                <button type="button" id="removeDashboardVideoBtn" class="btn btn-outline-danger" title="Delete uploaded video and all generated clips">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Remove Uploaded Video</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Clips Grid -->
+            <div class="clips-section-header">
+              <h3>Generated 1080p Clips (Max 10 per video)</h3>
+              <p>Download directly to your <strong>Photo Gallery / Camera Roll</strong> or save as MP4 files. Ready for TikTok, Reels & Shorts.</p>
+            </div>
+
+            <div id="clipsGrid" class="clips-grid">
+              <!-- Dynamically populated clip cards inserted via app.js -->
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="section how-it-works-section">
+      <div class="container">
+        <div class="section-badge">Simple & Fast</div>
+        <h2 class="section-title">How ClipForge Works</h2>
+        <p class="section-subtitle">Turn your long-form video into high-engagement short clips in three effortless steps.</p>
+
+        <div class="steps-grid">
+          <div class="step-card glass-panel">
+            <div class="step-number-pill">01</div>
+            <div class="step-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+            </div>
+            <h3>Provide URL & Upload Video</h3>
+            <p>Paste the YouTube video link for automated metadata retrieval, then upload your original source video file in MP4, MOV, MKV, or WebM format.</p>
+          </div>
+
+          <div class="step-card glass-panel">
+            <div class="step-number-pill">02</div>
+            <div class="step-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="6" cy="6" r="3"></circle>
+                <circle cx="6" cy="18" r="3"></circle>
+                <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <h3>Automated 30s Chunking</h3>
+            <p>Our server-side FFmpeg engine inspects timestamps and precisely divides the long video into consecutive, frame-accurate 30-second segments.</p>
+          </div>
+
+          <div class="step-card glass-panel">
+            <div class="step-number-pill">03</div>
+            <div class="step-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </div>
+            <h3>Preview & Export</h3>
+            <p>Inspect every clip in the interactive dashboard, test playback with synchronized audio, download individual MP4s, or grab the entire ZIP package.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="section features-section">
+      <div class="container">
+        <div class="section-badge">Built For Creators</div>
+        <h2 class="section-title">Engineered for Quality & Speed</h2>
+        <p class="section-subtitle">Everything you need to repurpose long podcasts, tutorials, and gameplay into viral shorts.</p>
+
+        <div class="features-grid">
+          <div class="feature-card glass-panel">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <h4>Exact 30-Second Splits</h4>
+            <p>Consecutive segments (00:00–00:30, 00:30–01:00...) with accurate keyframe cuts and audio synchronization.</p>
+          </div>
+
+          <div class="feature-card glass-panel">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+              </svg>
+            </div>
+            <h4>High-Fidelity H.264 & AAC</h4>
+            <p>Encoded with optimized standard MP4 specifications with faststart streaming flags for immediate web preview.</p>
+          </div>
+
+          <div class="feature-card glass-panel">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            </div>
+            <h4>Social Platform Ready</h4>
+            <p>Clips are instantly compatible with YouTube Shorts, Instagram Reels, TikTok, Twitter/X, and LinkedIn video feeds.</p>
+          </div>
+
+          <div class="feature-card glass-panel">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <h4>One-Click Batch ZIP Export</h4>
+            <p>Archive all generated clips into a clean, numbered ZIP file with streaming compression that avoids memory bottlenecking.</p>
+          </div>
+
+          <div class="feature-card glass-panel">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <h4>Strict Privacy & Auto-Cleanup</h4>
+            <p>Your content is processed in an isolated directory. Temporary files and generated clips are wiped automatically after 60 minutes.</p>
+          </div>
+
+          <div class="feature-card glass-panel">
+            <div class="feature-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <h4>Multi-Device Responsive</h4>
+            <p>Works smoothly across large desktop monitors, laptops, tablets, and smartphones with no horizontal scroll issues.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="section faq-section">
+      <div class="container">
+        <div class="section-badge">Got Questions?</div>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <p class="section-subtitle">Everything you need to know about video processing with ClipForge.</p>
+
+        <div class="faq-accordion">
+          <div class="faq-item glass-panel">
+            <button class="faq-question">
+              <span>Why do I need to upload the original video file?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <p>ClipForge processes high-fidelity source files directly using FFmpeg to preserve full frame rates, crisp audio, and pristine resolution without stream throttling or quality degradation. This also ensures complete compliance with platform terms by ensuring creators process content they own or are authorized to produce.</p>
+            </div>
+          </div>
+
+          <div class="faq-item glass-panel">
+            <button class="faq-question">
+              <span>How does the 30-second division work?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <p>The engine calculates the total duration using FFprobe. If your video is 10 minutes long (600 seconds), it generates exactly 20 clips of 30 seconds each. If the final remaining duration is less than 30 seconds (e.g. 15 seconds), the last clip will cleanly contain that remaining duration.</p>
+            </div>
+          </div>
+
+          <div class="faq-item glass-panel">
+            <button class="faq-question">
+              <span>What video formats and maximum sizes are supported?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <p>ClipForge supports MP4, MOV, MKV, and WebM files. The default upload ceiling is configured up to 1 GB (1024 MB), which can be customized by the server administrator via environment variables.</p>
+            </div>
+          </div>
+
+          <div class="faq-item glass-panel">
+            <button class="faq-question">
+              <span>How long are my generated clips saved on the server?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <p>For privacy and server hygiene, every job is assigned a unique isolated directory and automatically deleted after 60 minutes. Be sure to download your clips or the ZIP package promptly.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-brand">
+        <a href="#" class="brand-logo">
+          <div class="logo-icon-box">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              <line x1="19" y1="5" x2="19" y2="19" stroke-linecap="round"></line>
+            </svg>
+          </div>
+          <span class="brand-name">Clip<span class="text-gradient">Forge</span></span>
+        </a>
+        <p class="footer-tagline">Turn Long Videos Into Ready-to-Share Clips.</p>
+      </div>
+
+      <div class="footer-disclaimer">
+        <p><strong>Creator Compliance Notice:</strong> ClipForge is a productivity tool for video creators, editors, and publishers. Users must supply their own authorized original media files. Public YouTube video information is retrieved via official APIs for reference and indexing purposes only.</p>
+        <p class="copyright">© 2026 ClipForge. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="toast-notification">
+    <svg viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-emerald">
+      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+    </svg>
+    <span id="toastMsg">Saved to Gallery / Files!</span>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
+

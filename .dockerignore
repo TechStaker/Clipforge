@@ -1,0 +1,12 @@
+node_modules
+uploads/*
+!uploads/.gitkeep
+processed/*
+!processed/.gitkeep
+.git
+.env
+bin/yt-dlp.exe
+sample_75s_test.mp4
+test_*.js
+*.log
+
