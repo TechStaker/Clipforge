@@ -129,7 +129,12 @@ async function getYouTubeMetadata(videoUrl) {
       url: `https://www.youtube.com/watch?v=${videoId}`
     };
   } catch (err) {
-    // If both fail, return structured fallback with video ID and standard thumbnail
+    // If YouTube explicitly reported 404/401/403, the video is deleted or private
+    if (err.response && (err.response.status === 404 || err.response.status === 401 || err.response.status === 403)) {
+      throw new Error('This YouTube video is unavailable, private, or has been removed by YouTube. Please check the URL or try another video.');
+    }
+
+    // If temporary network timeout, return structured fallback with video ID and standard thumbnail
     return {
       videoId,
       title: `YouTube Video (${videoId})`,

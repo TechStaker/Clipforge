@@ -150,6 +150,18 @@ function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
         }
 
         const fullLog = (stderrData + '\n' + stdoutData);
+
+        // User-friendly error messages for common YouTube restriction scenarios:
+        if (fullLog.includes('This video is unavailable')) {
+          return reject(new Error('This YouTube video is unavailable or has been removed on YouTube. Please check the link or choose another video.'));
+        }
+        if (fullLog.includes('Private video')) {
+          return reject(new Error('This YouTube video is set to Private. Please use a public YouTube video link or upload the video file directly.'));
+        }
+        if (fullLog.includes('Sign in to confirm you') || fullLog.includes('HTTP Error 429')) {
+          return reject(new Error('YouTube is blocking automated cloud server requests for this specific video. You can still clip this video seamlessly by uploading it directly using the "Upload Local Video File" box!'));
+        }
+
         const errorLines = fullLog
           .split('\n')
           .filter(l => l.includes('ERROR:'))
