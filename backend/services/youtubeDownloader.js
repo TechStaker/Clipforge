@@ -36,8 +36,8 @@ try {
 // Active download child processes map for pause / cancel
 const activeDownloads = new Map();
 
-const PRIMARY_EXTRACTOR_ARGS = 'youtube:player_client=android_vr,tv_downgraded,tv,android,web_embedded;player_skip=webpage';
-const FALLBACK_EXTRACTOR_ARGS = 'youtube:player_client=tv,android;player_skip=webpage';
+const PRIMARY_EXTRACTOR_ARGS = 'youtube:player_client=web_embedded,android;player_skip=webpage';
+const FALLBACK_EXTRACTOR_ARGS = 'youtube:player_client=android;player_skip=webpage';
 
 /**
  * Builds resilient yt-dlp arguments tailored for cloud servers & datacenter IPs
