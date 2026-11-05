@@ -73,9 +73,12 @@ function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
 
     const outputTemplate = path.join(outputDir, `yt_source_${jobId}.%(ext)s`);
 
+    const nodeExecutable = process.execPath;
     const args = [
       '--no-playlist',
-      '--js-runtimes', 'node',
+      '--js-runtimes', `node:${nodeExecutable}`,
+      '--extractor-args', 'youtube:player_client=android,ios,web',
+      '--geo-bypass',
       '-N', '8', // 8 concurrent multi-connection threads for ultra-fast download
       '--max-filesize', '1024M',
       // Prioritize 1080p Full HD video stream
@@ -84,6 +87,14 @@ function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
       '--newline',
       '-o', outputTemplate
     ];
+
+    // Optional cookies support for authenticated extraction
+    const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
+    if (process.env.YOUTUBE_COOKIES_PATH && fs.existsSync(process.env.YOUTUBE_COOKIES_PATH)) {
+      args.push('--cookies', process.env.YOUTUBE_COOKIES_PATH);
+    } else if (fs.existsSync(rootCookies)) {
+      args.push('--cookies', rootCookies);
+    }
 
     if (ffmpegBinaryPath && fs.existsSync(ffmpegBinaryPath)) {
       args.push('--ffmpeg-location', path.dirname(ffmpegBinaryPath));
@@ -137,7 +148,15 @@ function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
         if (stdoutData.includes('SIGTERM') || stderrData.includes('SIGTERM')) {
           return reject(new Error('Download cancelled by user.'));
         }
-        return reject(new Error(`Failed to download YouTube video: ${stderrData || stdoutData}`));
+
+        const fullLog = (stderrData + '\n' + stdoutData);
+        const errorLines = fullLog
+          .split('\n')
+          .filter(l => l.includes('ERROR:'))
+          .map(l => l.replace(/ERROR:\s*(\[[^\]]+\])?\s*/i, '').trim());
+
+        const primaryError = errorLines[0] || fullLog.replace(/WARNING:[^\n]*\n?/g, '').trim().slice(0, 300);
+        return reject(new Error(`Failed to download YouTube video: ${primaryError}`));
       }
 
       try {
