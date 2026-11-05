@@ -574,6 +574,49 @@ function deleteJob(req, res) {
   });
 }
 
+/**
+ * Saves YouTube cookies to server for cloud bypass
+ */
+function saveCookies(req, res) {
+  try {
+    const { cookies } = req.body;
+    if (!cookies || typeof cookies !== 'string' || cookies.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide valid cookies.txt content.'
+      });
+    }
+
+    const cookiePath = path.join(__dirname, '..', '..', 'cookies.txt');
+    fs.writeFileSync(cookiePath, cookies.trim(), 'utf8');
+
+    return res.status(200).json({
+      success: true,
+      message: 'YouTube cookies saved successfully! Cloud YouTube downloads are now authenticated and active.'
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: `Failed to save cookies: ${err.message}`
+    });
+  }
+}
+
+/**
+ * Checks if cookies are present on the server
+ */
+function getCookieStatus(req, res) {
+  const cookiePath = path.join(__dirname, '..', '..', 'cookies.txt');
+  const hasEnv = !!process.env.YOUTUBE_COOKIES_DATA;
+  const hasFile = fs.existsSync(cookiePath) && fs.statSync(cookiePath).size > 20;
+
+  return res.status(200).json({
+    success: true,
+    hasCookies: hasFile || hasEnv,
+    source: hasEnv ? 'environment variable' : (hasFile ? 'cookies.txt' : 'none')
+  });
+}
+
 module.exports = {
   validateYouTubeUrl,
   processVideoUpload,
@@ -584,6 +627,8 @@ module.exports = {
   cancelJob,
   serveClip,
   downloadAllClipsZip,
-  deleteJob
+  deleteJob,
+  saveCookies,
+  getCookieStatus
 };
 

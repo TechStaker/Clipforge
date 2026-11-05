@@ -8,3 +8,4 @@ echo ====================================================
 start "" "http://localhost:3000"
 node backend/server.js
 pause
+

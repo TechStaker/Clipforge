@@ -122,6 +122,104 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------------------------------------
+  // Cloud YouTube Authentication & Setup Modal
+  // -------------------------------------------------------------
+  const openCloudSettingsBtn = document.getElementById('openCloudSettingsBtn');
+  const triggerCloudSetupLink = document.getElementById('triggerCloudSetupLink');
+  const cloudSetupModal = document.getElementById('cloudSetupModal');
+  const closeCloudSetupBtn = document.getElementById('closeCloudSetupBtn');
+  const cloudCookieStatusText = document.getElementById('cloudCookieStatusText');
+  const cloudCookieBadge = document.getElementById('cloudCookieBadge');
+  const cookieDataInput = document.getElementById('cookieDataInput');
+  const saveCloudCookiesBtn = document.getElementById('saveCloudCookiesBtn');
+  const connectLocalEngineBtn = document.getElementById('connectLocalEngineBtn');
+
+  function openCloudModal() {
+    if (cloudSetupModal) {
+      cloudSetupModal.classList.remove('hidden');
+      checkCloudCookieStatus();
+    }
+  }
+
+  function closeCloudModal() {
+    if (cloudSetupModal) {
+      cloudSetupModal.classList.add('hidden');
+    }
+  }
+
+  async function checkCloudCookieStatus() {
+    if (!cloudCookieStatusText || !cloudCookieBadge) return;
+    cloudCookieStatusText.textContent = 'Checking cloud status...';
+    try {
+      const res = await fetch(`${API_BASE}/api/cookies/status`);
+      const data = await res.json();
+      if (data && data.hasCookies) {
+        cloudCookieStatusText.textContent = `Active (${data.source || 'authenticated'})`;
+        cloudCookieBadge.textContent = 'Active';
+        cloudCookieBadge.className = 'badge-success';
+      } else {
+        cloudCookieStatusText.textContent = 'Not configured (Anonymous mode)';
+        cloudCookieBadge.textContent = 'Unauthenticated';
+        cloudCookieBadge.className = 'badge-warning';
+      }
+    } catch {
+      cloudCookieStatusText.textContent = 'Unable to check status';
+      cloudCookieBadge.textContent = 'Offline';
+      cloudCookieBadge.className = 'badge-warning';
+    }
+  }
+
+  if (openCloudSettingsBtn) openCloudSettingsBtn.addEventListener('click', openCloudModal);
+  if (triggerCloudSetupLink) triggerCloudSetupLink.addEventListener('click', openCloudModal);
+  if (closeCloudSetupBtn) closeCloudSetupBtn.addEventListener('click', closeCloudModal);
+  if (cloudSetupModal) {
+    cloudSetupModal.addEventListener('click', (e) => {
+      if (e.target === cloudSetupModal) closeCloudModal();
+    });
+  }
+
+  if (saveCloudCookiesBtn && cookieDataInput) {
+    saveCloudCookiesBtn.addEventListener('click', async () => {
+      const cookies = cookieDataInput.value.trim();
+      if (!cookies || cookies.length < 20) {
+        alert('Please paste valid cookies.txt data from your browser.');
+        return;
+      }
+      saveCloudCookiesBtn.disabled = true;
+      saveCloudCookiesBtn.textContent = 'Saving...';
+      try {
+        const res = await fetch(`${API_BASE}/api/cookies/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cookies })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          showToast('YouTube cookies saved! Cloud downloads are now active.');
+          cookieDataInput.value = '';
+          checkCloudCookieStatus();
+          setTimeout(closeCloudModal, 1500);
+        } else {
+          alert(data.error || 'Failed to save cookies.');
+        }
+      } catch (err) {
+        alert(`Error saving cookies: ${err.message}`);
+      } finally {
+        saveCloudCookiesBtn.disabled = false;
+        saveCloudCookiesBtn.textContent = 'Save Cookies to Cloud';
+      }
+    });
+  }
+
+  if (connectLocalEngineBtn) {
+    connectLocalEngineBtn.addEventListener('click', () => {
+      localStorage.setItem('CLIPFORGE_API_URL', 'http://localhost:3000');
+      showToast('Switched to local engine! Reloading...');
+      setTimeout(() => window.location.reload(), 1000);
+    });
+  }
+
+  // -------------------------------------------------------------
   // 1. Mobile Menu Drawer Toggle
   // -------------------------------------------------------------
   if (mobileMenuBtn && mobileDrawer) {

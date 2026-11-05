@@ -51,6 +51,12 @@
       </nav>
 
       <div class="header-actions">
+        <button type="button" id="openCloudSettingsBtn" class="btn btn-secondary btn-sm" title="Configure Cloud YouTube Cookies">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1">
+            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+          </svg>
+          <span>Cloud Setup</span>
+        </button>
         <a href="#workspace" class="btn btn-primary btn-sm">
           <span>Get Started</span>
           <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
@@ -140,6 +146,10 @@
                     <span id="fetchBtnText">Fetch Info</span>
                     <span id="fetchBtnSpinner" class="spinner-sm hidden"></span>
                   </button>
+                </div>
+                <div class="mt-2 text-xs flex items-center justify-between text-muted">
+                  <span>💡 Pasting links on hosted website?</span>
+                  <button type="button" id="triggerCloudSetupLink" class="text-primary hover:underline font-medium bg-transparent border-0 cursor-pointer p-0">⚙️ Configure Cloud Cookies</button>
                 </div>
 
                 <!-- YouTube Info Card (Hidden by default, shown upon metadata fetch) -->
@@ -696,6 +706,54 @@
       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
     </svg>
     <span id="toastMsg">Saved to Gallery / Files!</span>
+  </div>
+
+  <!-- Cloud YouTube Setup Modal -->
+  <div id="cloudSetupModal" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="flex items-center gap-2">
+          <div>
+            <h3 class="modal-title">Cloud YouTube Authentication</h3>
+            <p class="modal-subtitle">Authenticate cloud downloads with your browser cookies</p>
+          </div>
+        </div>
+        <button type="button" id="closeCloudSetupBtn" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="status-indicator-box mb-4 p-3 rounded-lg flex items-center justify-between" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+          <div>
+            <span class="text-xs text-muted block" style="font-size: 0.75rem; color: #94a3b8; display: block;">Cloud Status</span>
+            <span id="cloudCookieStatusText" class="font-semibold text-sm" style="font-weight: 600; font-size: 0.9rem; color: #fff;">Checking status...</span>
+          </div>
+          <span id="cloudCookieBadge" class="badge-warning">Checking...</span>
+        </div>
+
+        <div class="setup-instructions mb-4 p-3 rounded-lg" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; font-size: 0.8rem; color: #94a3b8; line-height: 1.5;">
+          <div style="font-weight: 600; color: #fff; margin-bottom: 0.4rem;">How to authenticate in 30 seconds:</div>
+          <ol style="margin-left: 1.2rem; padding: 0;">
+            <li>Install free browser extension: <strong style="color: #60a5fa;">Get cookies.txt LOCALLY</strong></li>
+            <li>Open YouTube in your browser, click the extension icon, and copy the cookies text</li>
+            <li>Paste into the box below and click <strong style="color: #60a5fa;">Save Cookies to Cloud</strong></li>
+          </ol>
+        </div>
+
+        <div class="form-group mb-4" style="margin-bottom: 1rem;">
+          <label for="cookieDataInput" style="display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 0.3rem;">cookies.txt Content</label>
+          <textarea id="cookieDataInput" rows="5" class="config-input" style="width: 100%; font-family: monospace; font-size: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 0.6rem; color: #e2e8f0; resize: vertical;" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem;">
+          <button type="button" id="saveCloudCookiesBtn" class="btn btn-primary btn-sm" style="flex: 1;">
+            <span>Save Cookies to Cloud</span>
+          </button>
+          <button type="button" id="connectLocalEngineBtn" class="btn btn-secondary btn-sm" title="Connect to local engine (http://localhost:3000)">
+            <span>Use Localhost</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="js/app.js"></script>

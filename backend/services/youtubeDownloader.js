@@ -58,9 +58,23 @@ function buildYtDlpArgs(outputTemplate, extractorArgs, formatString, url) {
 
   // Optional cookies support for authenticated extraction
   const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
+
+  // Handle environment variable cookies if provided
+  if (process.env.YOUTUBE_COOKIES_DATA) {
+    try {
+      let data = process.env.YOUTUBE_COOKIES_DATA.trim();
+      if (data.startsWith('base64:')) {
+        data = Buffer.from(data.slice(7), 'base64').toString('utf8');
+      }
+      fs.writeFileSync(rootCookies, data, 'utf8');
+    } catch (e) {
+      console.warn('[YouTube Downloader] Failed writing YOUTUBE_COOKIES_DATA:', e.message);
+    }
+  }
+
   if (process.env.YOUTUBE_COOKIES_PATH && fs.existsSync(process.env.YOUTUBE_COOKIES_PATH)) {
     args.push('--cookies', process.env.YOUTUBE_COOKIES_PATH);
-  } else if (fs.existsSync(rootCookies)) {
+  } else if (fs.existsSync(rootCookies) && fs.statSync(rootCookies).size > 20) {
     args.push('--cookies', rootCookies);
   }
 
@@ -196,10 +210,17 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
     });
   }
 
-  // Attempt 1: Multi-client rotation with player_skip=webpage
+  const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
+  const hasCookies = (fs.existsSync(rootCookies) && fs.statSync(rootCookies).size > 20) || !!process.env.YOUTUBE_COOKIES_DATA || !!process.env.YOUTUBE_COOKIES_PATH;
+
+  // When cookies are present, use authenticated clients; otherwise use multi-client rotation with player_skip=webpage
+  const firstExtractorArgs = hasCookies ? 'youtube:player_client=web,android,ios' : PRIMARY_EXTRACTOR_ARGS;
+  const secondExtractorArgs = hasCookies ? PRIMARY_EXTRACTOR_ARGS : FALLBACK_EXTRACTOR_ARGS;
+
+  // Attempt 1: Multi-client rotation
   const primaryArgs = buildYtDlpArgs(
     outputTemplate,
-    PRIMARY_EXTRACTOR_ARGS,
+    firstExtractorArgs,
     'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
     url
   );
@@ -211,7 +232,7 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
       throw err1;
     }
 
-    console.warn(`[YouTube Downloader] Primary client rotation encountered an issue: ${err1.message.slice(0, 150)}. Retrying with TV/Android client fallback...`);
+    console.warn(`[YouTube Downloader] Primary client rotation encountered an issue: ${err1.message.slice(0, 150)}. Retrying with fallback clients...`);
 
     // Clean up partial files from attempt 1 if any
     try {
@@ -221,10 +242,10 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
       });
     } catch {}
 
-    // Attempt 2: Fallback TV & Android smart clients
+    // Attempt 2: Fallback smart clients
     const fallbackArgs = buildYtDlpArgs(
       outputTemplate,
-      FALLBACK_EXTRACTOR_ARGS,
+      secondExtractorArgs,
       'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best/18',
       url
     );

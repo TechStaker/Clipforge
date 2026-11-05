@@ -34,5 +34,9 @@ router.get('/videos/download-all/:jobId', videoController.downloadAllClipsZip);
 router.delete('/videos/delete/:jobId', videoController.deleteJob);
 router.post('/videos/delete/:jobId', videoController.deleteJob);
 
+// Route 11: YouTube Cloud Authentication Cookies
+router.get('/cookies/status', videoController.getCookieStatus);
+router.post('/cookies/save', videoController.saveCookies);
+
 module.exports = router;
 
