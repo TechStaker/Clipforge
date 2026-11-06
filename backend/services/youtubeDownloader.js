@@ -378,7 +378,8 @@ function buildYtDlpArgs(outputTemplate, extractorArgs, formatString, url) {
     '--geo-bypass',
     '-N', '8',
     '--max-filesize', '1024M',
-    '-f', formatString,
+    '-S', 'res:1080,ext:mp4:m4a',
+    '-f', formatString || 'bestvideo*+bestaudio/b/best/18',
     '--merge-output-format', 'mp4',
     '--newline'
   ];

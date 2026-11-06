@@ -57,6 +57,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'ClipForge Video Clipper',
+    version: '1.2.5',
     timestamp: new Date().toISOString(),
     maxUploadMb
   });
