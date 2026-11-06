@@ -373,7 +373,6 @@ function buildYtDlpArgs(outputTemplate, extractorArgs, formatString, url) {
   const args = [
     '--no-playlist',
     '--js-runtimes', 'node',
-    '--extractor-args', extractorArgs,
     '--force-ipv4',
     '--geo-bypass',
     '-N', '8',
@@ -383,6 +382,10 @@ function buildYtDlpArgs(outputTemplate, extractorArgs, formatString, url) {
     '--merge-output-format', 'mp4',
     '--newline'
   ];
+
+  if (extractorArgs && extractorArgs.trim()) {
+    args.push('--extractor-args', extractorArgs.trim());
+  }
 
   const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
 
@@ -550,11 +553,13 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
 
   // Strategy 1: High-speed native yt-dlp download with resilient client rotation & 8 parallel threads
   // On local/residential connections, this completes in 1-2 seconds with pristine 1080p stream quality!
+  // When authenticated cookies are present, use standard client without player_skip so cookies apply cleanly;
+  // Otherwise use web_embedded/android rotation to bypass bot checks.
   const firstExtractorArgs = hasCookies
-    ? 'youtube:player_client=web_embedded,android,web;player_skip=webpage'
+    ? ''
     : PRIMARY_EXTRACTOR_ARGS;
   const secondExtractorArgs = hasCookies
-    ? PRIMARY_EXTRACTOR_ARGS
+    ? 'youtube:player_client=default,web'
     : FALLBACK_EXTRACTOR_ARGS;
 
   const primaryArgs = buildYtDlpArgs(
