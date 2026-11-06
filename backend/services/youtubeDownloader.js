@@ -549,13 +549,17 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
 
   // Strategy 1: High-speed native yt-dlp download with resilient client rotation & 8 parallel threads
   // On local/residential connections, this completes in 1-2 seconds with pristine 1080p stream quality!
-  const firstExtractorArgs = hasCookies ? 'youtube:player_client=web,android,ios' : PRIMARY_EXTRACTOR_ARGS;
-  const secondExtractorArgs = hasCookies ? PRIMARY_EXTRACTOR_ARGS : FALLBACK_EXTRACTOR_ARGS;
+  const firstExtractorArgs = hasCookies
+    ? 'youtube:player_client=web_embedded,android,web;player_skip=webpage'
+    : PRIMARY_EXTRACTOR_ARGS;
+  const secondExtractorArgs = hasCookies
+    ? PRIMARY_EXTRACTOR_ARGS
+    : FALLBACK_EXTRACTOR_ARGS;
 
   const primaryArgs = buildYtDlpArgs(
     outputTemplate,
     firstExtractorArgs,
-    'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+    'bestvideo*[height<=1080]+bestaudio/best[height<=1080]/b/best/18',
     url
   );
 
@@ -580,7 +584,7 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
     const fallbackArgs = buildYtDlpArgs(
       outputTemplate,
       secondExtractorArgs,
-      'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best/18',
+      'b/best/18/bestvideo*+bestaudio',
       url
     );
 
