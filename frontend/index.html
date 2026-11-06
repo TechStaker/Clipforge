@@ -11,8 +11,16 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <script>
-    // Universal auto-configured backend URL for all devices (Mobile, PC, Tablet)
-    window.CLIPFORGE_API_URL = "https://clipforge-backend-35fv.onrender.com";
+    // Universal auto-configured backend URL:
+    // When running on hosted Vercel, route to Render cloud backend.
+    // When running locally (localhost / Wi-Fi LAN IP), ALWAYS use local backend directly!
+    const isVercelHost = window.location.hostname.includes('vercel.app');
+    if (isVercelHost) {
+      window.CLIPFORGE_API_URL = "https://clipforge-backend-35fv.onrender.com";
+    } else {
+      window.CLIPFORGE_API_URL = "";
+      try { localStorage.removeItem('CLIPFORGE_API_URL'); } catch (e) {}
+    }
   </script>
 </head>
 <body>

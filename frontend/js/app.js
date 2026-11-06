@@ -96,10 +96,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Universal default backend: automatically connects on all devices without requiring manual setup
   const DEFAULT_BACKEND = 'https://clipforge-backend-35fv.onrender.com';
   const isVercel = window.location.hostname.includes('vercel.app');
+  const isLocalHost = (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.startsWith('192.168.') ||
+    window.location.hostname.startsWith('10.') ||
+    window.location.hostname.startsWith('172.') ||
+    !window.location.hostname.includes('.')
+  );
+
+  // If accessed locally (desktop or local Wi-Fi mobile), ALWAYS use local server directly!
+  if (isLocalHost) {
+    try { localStorage.removeItem('CLIPFORGE_API_URL'); } catch (e) {}
+  }
+
   const API_BASE = (
-    localStorage.getItem('CLIPFORGE_API_URL') ||
-    window.CLIPFORGE_API_URL ||
-    (isVercel ? DEFAULT_BACKEND : '')
+    isLocalHost
+      ? ''
+      : (localStorage.getItem('CLIPFORGE_API_URL') || window.CLIPFORGE_API_URL || (isVercel ? DEFAULT_BACKEND : ''))
   ).replace(/\/$/, '');
 
   // Hide banner automatically since backend is permanently connected
