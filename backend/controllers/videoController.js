@@ -613,8 +613,19 @@ function saveCookies(req, res) {
  */
 function getCookieStatus(req, res) {
   const cookiePath = path.join(__dirname, '..', '..', 'cookies.txt');
-  const hasEnv = !!process.env.YOUTUBE_COOKIES_DATA;
-  const hasFile = fs.existsSync(cookiePath) && fs.statSync(cookiePath).size > 20;
+  const envData = process.env.YOUTUBE_COOKIES_DATA || '';
+  const hasEnv = envData.trim().length > 40 && (
+    envData.includes('.youtube.com') ||
+    envData.includes('# Netscape') ||
+    envData.includes('__Secure-')
+  );
+  let hasFile = false;
+  try {
+    if (fs.existsSync(cookiePath) && fs.statSync(cookiePath).size > 40) {
+      const fileData = fs.readFileSync(cookiePath, 'utf8');
+      hasFile = fileData.includes('.youtube.com') || fileData.includes('# Netscape') || fileData.includes('__Secure-');
+    }
+  } catch {}
 
   return res.status(200).json({
     success: true,

@@ -363,13 +363,58 @@ async function downloadViaStreamResolver({ videoId, jobId, outputDir, onProgress
   }
 }
 
-const PRIMARY_EXTRACTOR_ARGS = 'youtube:player_client=web_embedded,android;player_skip=webpage';
-const FALLBACK_EXTRACTOR_ARGS = 'youtube:player_client=android;player_skip=webpage';
+function isValidCookieData(content) {
+  if (!content || typeof content !== 'string') return false;
+  const trimmed = content.trim();
+  if (trimmed.length < 40) return false;
+  return trimmed.includes('.youtube.com') || trimmed.includes('# Netscape') || trimmed.includes('__Secure-');
+}
+
+function isValidCookieFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return false;
+    const stat = fs.statSync(filePath);
+    if (stat.size < 40) return false;
+    const content = fs.readFileSync(filePath, 'utf8');
+    return isValidCookieData(content);
+  } catch {
+    return false;
+  }
+}
+
+function prepareCookies() {
+  const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
+  if (process.env.YOUTUBE_COOKIES_DATA) {
+    try {
+      let data = process.env.YOUTUBE_COOKIES_DATA.trim();
+      if (data.startsWith('base64:')) {
+        data = Buffer.from(data.slice(7), 'base64').toString('utf8');
+      }
+      if (isValidCookieData(data)) {
+        fs.writeFileSync(rootCookies, data, 'utf8');
+      }
+    } catch (e) {
+      console.warn('[YouTube Downloader] Failed writing YOUTUBE_COOKIES_DATA:', e.message);
+    }
+  }
+
+  if (process.env.YOUTUBE_COOKIES_PATH && isValidCookieFile(process.env.YOUTUBE_COOKIES_PATH)) {
+    return process.env.YOUTUBE_COOKIES_PATH;
+  }
+  if (isValidCookieFile(rootCookies)) {
+    return rootCookies;
+  }
+  return null;
+}
+
+const PRIMARY_EXTRACTOR_ARGS = 'youtube:player-client=android,visionos';
+const SECONDARY_EXTRACTOR_ARGS = 'youtube:player-client=visionos,ios,android';
+const TERTIARY_EXTRACTOR_ARGS = 'youtube:player-client=tv_embedded,web_creator,mweb';
 
 /**
  * Builds resilient yt-dlp arguments tailored for cloud servers & datacenter IPs
  */
-function buildYtDlpArgs(outputTemplate, extractorArgs, formatString, url) {
+function buildYtDlpArgs(outputTemplate, extractorArgs, formatString, url, allowCookies = true) {
   const args = [
     '--no-playlist',
     '--js-runtimes', 'node',
@@ -387,24 +432,11 @@ function buildYtDlpArgs(outputTemplate, extractorArgs, formatString, url) {
     args.push('--extractor-args', extractorArgs.trim());
   }
 
-  const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
-
-  if (process.env.YOUTUBE_COOKIES_DATA) {
-    try {
-      let data = process.env.YOUTUBE_COOKIES_DATA.trim();
-      if (data.startsWith('base64:')) {
-        data = Buffer.from(data.slice(7), 'base64').toString('utf8');
-      }
-      fs.writeFileSync(rootCookies, data, 'utf8');
-    } catch (e) {
-      console.warn('[YouTube Downloader] Failed writing YOUTUBE_COOKIES_DATA:', e.message);
+  if (allowCookies) {
+    const validCookiePath = prepareCookies();
+    if (validCookiePath) {
+      args.push('--cookies', validCookiePath);
     }
-  }
-
-  if (process.env.YOUTUBE_COOKIES_PATH && fs.existsSync(process.env.YOUTUBE_COOKIES_PATH)) {
-    args.push('--cookies', process.env.YOUTUBE_COOKIES_PATH);
-  } else if (fs.existsSync(rootCookies) && fs.statSync(rootCookies).size > 20) {
-    args.push('--cookies', rootCookies);
   }
 
   if (ffmpegBinaryPath && fs.existsSync(ffmpegBinaryPath)) {
@@ -546,27 +578,19 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
     });
   }
 
-  const rootCookies = path.join(__dirname, '..', '..', 'cookies.txt');
-  const hasCookies = (fs.existsSync(rootCookies) && fs.statSync(rootCookies).size > 20) || !!process.env.YOUTUBE_COOKIES_DATA || !!process.env.YOUTUBE_COOKIES_PATH;
+  const validCookiePath = prepareCookies();
+  const hasCookies = !!validCookiePath;
 
   const videoId = extractYouTubeVideoId(url);
 
-  // Strategy 1: High-speed native yt-dlp download with resilient client rotation & 8 parallel threads
-  // On local/residential connections, this completes in 1-2 seconds with pristine 1080p stream quality!
-  // When authenticated cookies are present, use standard client without player_skip so cookies apply cleanly;
-  // Otherwise use web_embedded/android rotation to bypass bot checks.
-  const firstExtractorArgs = hasCookies
-    ? ''
-    : PRIMARY_EXTRACTOR_ARGS;
-  const secondExtractorArgs = hasCookies
-    ? 'youtube:player_client=default,web'
-    : FALLBACK_EXTRACTOR_ARGS;
-
+  // Strategy 1: High-speed native yt-dlp with android+visionos rotation & 8 parallel threads
+  // On local/residential connections and datacenter IPs, android+visionos extracts 1080p cleanly.
   const primaryArgs = buildYtDlpArgs(
     outputTemplate,
-    firstExtractorArgs,
+    PRIMARY_EXTRACTOR_ARGS,
     'bestvideo*[height<=1080]+bestaudio/best[height<=1080]/b/best/18',
-    url
+    url,
+    hasCookies
   );
 
   try {
@@ -576,7 +600,7 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
       throw err1;
     }
 
-    console.warn(`[YouTube Downloader] Primary client attempt issue: ${err1.message.slice(0, 150)}. Retrying fallback client rotation...`);
+    console.warn(`[YouTube Downloader] Strategy 1 issue: ${err1.message.slice(0, 150)}. Retrying Strategy 2 (visionos,ios,android rotation without cookies)...`);
 
     // Clean up partial files from attempt 1 if any
     try {
@@ -586,12 +610,13 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
       });
     } catch {}
 
-    // Strategy 2: Fallback smart clients
+    // Strategy 2: visionos + ios + android rotation (clean unauthenticated bypass)
     const fallbackArgs = buildYtDlpArgs(
       outputTemplate,
-      secondExtractorArgs,
-      'b/best/18/bestvideo*+bestaudio',
-      url
+      SECONDARY_EXTRACTOR_ARGS,
+      'bestvideo*[height<=1080]+bestaudio/b/best/18',
+      url,
+      false // do not use cookies in case cookies triggered bot challenge
     );
 
     try {
@@ -601,28 +626,46 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
         throw err2;
       }
 
-      // Strategy 3: Cloud stream resolver bypass (for datacenter IPs like Render / AWS)
-      if (videoId) {
-        try {
-          console.log(`[YouTube Downloader] yt-dlp hit datacenter check. Attempting stream resolver for ${videoId}...`);
-          const streamCtrl = new AbortController();
-          activeStreamControllers.set(jobId, streamCtrl);
-          const res = await downloadViaStreamResolver({
-            videoId,
-            jobId,
-            outputDir,
-            onProgress,
-            signal: streamCtrl.signal
-          });
-          activeStreamControllers.delete(jobId);
-          return res;
-        } catch (resolverErr) {
-          activeStreamControllers.delete(jobId);
-          console.warn(`[YouTube Downloader] Stream resolver could not complete: ${resolverErr.message}`);
-        }
-      }
+      console.warn(`[YouTube Downloader] Strategy 2 issue: ${err2.message.slice(0, 150)}. Retrying Strategy 3 (tv_embedded,web_creator,mweb)...`);
 
-      const fullLog = err2.fullLog || err1.fullLog || err2.message || '';
+      // Strategy 3: tv_embedded, web_creator, mweb
+      const fallbackArgs3 = buildYtDlpArgs(
+        outputTemplate,
+        TERTIARY_EXTRACTOR_ARGS,
+        'b/best/18/bestvideo*+bestaudio',
+        url,
+        false
+      );
+
+      try {
+        return await executeDownload(fallbackArgs3, jobId, outputDir, onProgress);
+      } catch (err3) {
+        if (err3.isCancelled) {
+          throw err3;
+        }
+
+        // Strategy 4: Cloud stream resolver bypass (for datacenter IPs like Render / AWS)
+        if (videoId) {
+          try {
+            console.log(`[YouTube Downloader] yt-dlp hit datacenter check. Attempting stream resolver for ${videoId}...`);
+            const streamCtrl = new AbortController();
+            activeStreamControllers.set(jobId, streamCtrl);
+            const res = await downloadViaStreamResolver({
+              videoId,
+              jobId,
+              outputDir,
+              onProgress,
+              signal: streamCtrl.signal
+            });
+            activeStreamControllers.delete(jobId);
+            return res;
+          } catch (resolverErr) {
+            activeStreamControllers.delete(jobId);
+            console.warn(`[YouTube Downloader] Stream resolver could not complete: ${resolverErr.message}`);
+          }
+        }
+
+        const fullLog = err3.fullLog || err2.fullLog || err1.fullLog || err3.message || '';
 
       if (
         fullLog.includes('This video is unavailable') ||
@@ -647,6 +690,7 @@ async function downloadYouTubeVideo({ url, outputDir, jobId, onProgress }) {
       throw new Error(`Failed to download YouTube video: ${primaryError}`);
     }
   }
+}
 }
 
 module.exports = {
